@@ -9,10 +9,24 @@
       integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2"
       crossorigin="anonymous"
     />
+    <link href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" rel="stylesheet" />
     <title>学習記録</title>
   </head>
   <body>
-    <h1>学習記録</h1>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-3">
+      <span class="navbar-brand mb-0 h1">Study Record</span>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbar">
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="javascript:void(0)" data-toggle="modal" data-target="#writeModal" data-backdrop="static"><i class="fas fa-plus-square"></i> 記録を追加</a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <?!= HtmlService.createTemplateFromFile("write").evaluate().getContent() ?>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
