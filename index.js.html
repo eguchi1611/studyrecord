@@ -1,0 +1,150 @@
+<script>
+  window.appMain = new Vue({
+    el: "#app",
+    data: {
+      records: {},
+      tab: "",
+      custom: {
+        start: "",
+        end: "",
+      },
+
+      // 以下記録モーダル用
+      date: formatDate(),
+      hour: 0,
+      minute: 0,
+      message: "",
+      empties: [],
+      suggested: [],
+    },
+    computed: {
+      min() {
+        if (Object.keys(this.records).length) {
+          let min = this.dateList[0];
+          this.custom.start = min;
+          return min;
+        }
+      },
+      max() {
+        if (Object.keys(this.records).length) {
+          let max = this.dateList[this.dateList.length - 1];
+          this.custom.end = max;
+          return max;
+        }
+      },
+      dateList() {
+        let key1 = Object.keys(this.records)[0];
+        let key2 = Object.keys(this.records[key1])[0];
+        return Object.keys(this.records[key1][key2].total).sort();
+      },
+
+      // 以下記録モーダル用
+      record() {
+        return Number(this.hour) + Math.round((this.minute / 60) * 10) / 10;
+      },
+    },
+    methods: {
+      getTotalAll(className, groupName) {
+        let total = 0;
+        let groups = this.records[className][groupName].total;
+        let keys = Object.keys(groups);
+        for (let key of keys) {
+          total += groups[key];
+        }
+        return Math.round((total / keys.length) * 10) / 10;
+      },
+      getTotalWeek(className, groupName) {
+        let total = 0;
+        let groups = this.records[className][groupName].total;
+        let keys = Object.keys(groups).splice(-7, 7);
+        for (let key of keys) {
+          total += groups[key];
+        }
+        return Math.round((total / keys.length) * 10) / 10;
+      },
+      getTotalCustom(className, groupName) {
+        let start = (new Date(this.custom.start).getTime() - new Date(this.min).getTime()) / 24 / 60 / 60 / 1000;
+        let end = (new Date(this.custom.end).getTime() - new Date(this.max)) / 24 / 60 / 60 / 1000;
+        let total = 0;
+        let groups = this.records[className][groupName].total;
+        let keys = this.dateList.slice(start, end != 0 ? end : undefined);
+        for (let key of keys) {
+          total += groups[key];
+        }
+        return Math.round((total / keys.length) * 10) / 10;
+      },
+      // 以下記録モーダル用
+      submit() {
+        google.script.run
+          .withSuccessHandler(function () {
+            window.load();
+            window.appMain.message = "記録しました";
+          })
+          .withFailureHandler(function (error) {
+            window.appMain.message = error.message;
+          })
+          .commit(this.date, this.record);
+      },
+    },
+    watch: {
+      tab() {
+        setTimeout(tableSort, 0);
+      },
+      custom: {
+        handler: tableSort,
+        deep: true,
+      },
+    },
+  });
+
+  $(function () {
+    google.script.run
+      .withSuccessHandler(function (records) {
+        let app = window.appMain;
+        app.records = records;
+        // ----------------------------------------------
+        console.log(JSON.stringify(records, null, "\t"));
+        // ----------------------------------------------
+        app.tab = Object.keys(app.records).sort()[0];
+      })
+      .getRecords();
+    window.load();
+  });
+
+  function tableSort() {
+    $("table").not("#overview").trigger("destroy");
+    $("table")
+      .not("#overview")
+      .tablesorter({
+        sortList: [[1, 0]],
+        headers: {
+          0: { sorter: false },
+        },
+      });
+  }
+
+  window.load = function load() {
+    google.script.run
+      .withSuccessHandler(function (overview) {
+        let empties = [];
+        for (let object of overview.empties) empties.push(formatDate(new Date(object)));
+        if (!empties.length) $("#writeModal").modal("hide");
+        window.appMain.empties = empties;
+        let records = overview.mode;
+        if (records.length >= 3) records = records.splice(0, 3);
+        let suggested = [];
+        for (let record of records) {
+          suggested.push([(hour = Math.floor(record)), Number("0." + String(record).split(".")[1]) * 60]);
+        }
+        window.appMain.suggested = suggested;
+      })
+      .getOverview();
+  };
+
+  function formatDate(request) {
+    let d = new Date();
+    d.setDate(d.getDate() - 1);
+    let date = request || d;
+    return date.getFullYear() + "-" + ("0" + (date.getMonth() + 1)).slice(-2) + "-" + ("0" + date.getDate()).slice(-2);
+  }
+</script>

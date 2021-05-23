@@ -18,7 +18,6 @@ function requestUser() {
   let result = {
     user: {},
   };
-  // current = null;
   if (current) {
     result = JSON.parse(current);
   } else {
@@ -31,7 +30,6 @@ function requestUser() {
         }
       }
     }
-    //
     result.start = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("DATA").getRange(2, 1).getValue().toString();
     cache.put("user", JSON.stringify(result));
   }
@@ -54,12 +52,13 @@ function getOverview() {
   for (let key of Object.keys(temp)) {
     mode.push([key, temp[key]]);
   }
-  mode.sort(function (a, b) {
-    return b[1] - a[1];
-  });
-  mode = mode.map(function (value) {
-    return value[0];
-  });
+  mode = mode
+    .sort(function (a, b) {
+      return b[1] - a[1];
+    })
+    .map(function (value) {
+      return value[0];
+    });
   return {
     empties: empties,
     mode: mode,
