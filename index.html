@@ -28,6 +28,11 @@
             <li class="nav-item">
               <a class="nav-link" href="javascript:void(0)" data-toggle="modal" data-target="#writeModal" data-backdrop="static"><i class="fas fa-plus-square"></i> 記録する</a>
             </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://docs.google.com/spreadsheets/d/1zWm41EXRGEzcbEd82RFNjJhV2OdYBxt0DZOIhQkhMec/edit?usp=sharing" target="_blank"
+                ><i class="fas fa-table"></i> グループ編集</a
+              >
+            </li>
           </ul>
           <form class="form-inline">
             <label class="mr-sm-2">カスタム範囲</label>
@@ -35,18 +40,19 @@
               <div class="input-group-prepend">
                 <span class="input-group-text">開始</span>
               </div>
-              <input class="form-control" type="date" v-model:value="custom.start" v-bind:max="custom.end" v-bind:min="min" />
+              <input class="form-control" type="date" v-model:value="customRange.start" v-bind:max="customRange.end" v-bind:min="dateMin" />
             </div>
             <div class="input-group mb-2 mb-sm-0">
               <div class="input-group-prepend">
                 <span class="input-group-text">終了</span>
               </div>
-              <input class="form-control" type="date" v-model:value="custom.end" v-bind:min="custom.start" v-bind:max="max" />
+              <input class="form-control" type="date" v-model:value="customRange.end" v-bind:min="customRange.start" v-bind:max="dateMax" />
             </div>
           </form>
         </div>
       </nav>
       <div class="container">
+        <div class="alert alert-danger" v-if="emptyDateList.length">入力されていない日付があります</div>
         <div class="row">
           <div class="col-md-3">
             <div class="list-group nav">
@@ -65,20 +71,22 @@
         <hr />
         <div v-if="tab == className" v-for="className of Object.keys(records)">
           <div class="table-responsive count">
-            <table class="table table-sm text-nowrap tablesorter-default">
+            <table class="table table-sm text-nowrap tablesorter-default sortable_table">
               <thead>
                 <tr>
                   <th scope="col">#</th>
                   <th scope="col">グループ名</th>
-                  <th scope="col">これまでの平均（偏差値）</th>
-                  <th scope="col">一週間の平均（偏差値）</th>
-                  <th scope="col">カスタム範囲の平均（偏差値）</th>
+                  <th scope="col">これまでの合計</th>
+                  <th scope="col">これまでの平均</th>
+                  <th scope="col">一週間の平均</th>
+                  <th scope="col">カスタム範囲の平均</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="groupName of Object.keys(records[className])">
                   <td></td>
                   <th scope="row">{{ groupName }}</th>
+                  <td>{{ Math.round(getTotalAll(className, groupName) * dateList.length * 10) / 10 }}</td>
                   <td>{{ getTotalAll(className, groupName) }}</td>
                   <td>{{ getTotalWeek(className, groupName) }}</td>
                   <td>{{ getTotalCustom(className, groupName) }}</td>
@@ -88,7 +96,62 @@
           </div>
         </div>
       </div>
-      <?!= HtmlService.createTemplateFromFile("write").evaluate().getContent() ?>
+      <div class="modal fade" id="writeModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content" id="writeApp">
+            <form v-on:submit.prevent="submit()">
+              <div class="modal-header">
+                <h5 class="modal-title">記録する</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="form-group">
+                  <label>学習した日付</label>
+                  <input class="form-control" type="date" required v-model:value="entryDate" v-bind:min="dateList[0]" v-bind:max="dateList[dateList.length - 1]" />
+                  <div class="d-flex mt-2">
+                    <button class="btn btn-sm btn-outline-info mr-2" type="button" v-on:click="entryDate = element" v-for="element of emptyDateList">{{ element.replace(/-/g, '/') }}</button>
+                    <span v-if="!emptyDateList.length">すべての日付の学習時間が入力されています</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>学習時間</label>
+                  <div class="form-row">
+                    <div class="input-group col">
+                      <input class="form-control" type="number" min="0" max="23" step="1" required v-model:value="elapsedHours" />
+                      <div class="input-group-append">
+                        <span class="input-group-text">時間</span>
+                      </div>
+                    </div>
+                    <div class="input-group col">
+                      <input class="form-control" type="number" min="0" max="59" step="1" required v-model:value="elapsedMinutes" />
+                      <div class="input-group-append">
+                        <span class="input-group-text">分</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="d-flex mt-2">
+                    <button
+                      class="btn btn-sm btn-outline-info mr-2"
+                      type="button"
+                      v-for="element of suggestedElapsedTimeList"
+                      v-on:click="elapsedHours = element.hour; elapsedMinutes = element.minute"
+                    >
+                      {{ element.hour }}時間{{ element.minute }}分
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <div class="mr-auto">{{ responseMessage }}</div>
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">閉じる</button>
+                <button type="submit" class="btn btn-primary">記録</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script
