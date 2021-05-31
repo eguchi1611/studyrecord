@@ -12,28 +12,34 @@ function getOverview() {
   let VALUES_DATA = spreadsheet.getSheetByName("DATA").getDataRange().getValues();
   let VALUES_USERS = spreadsheet.getSheetByName("USERS").getDataRange().getValues();
 
+  let email = Session.getActiveUser().getEmail();
+
   // ユーザー情報の取得
-  let status = {};
+  let userList = {};
   for (let y = 1; y < VALUES_USERS.length; y++) {
-    if (VALUES_USERS[y][0] == Session.getActiveUser().getEmail()) {
-      for (let x = 0; x < VALUES_USERS[y].length; x++) {
-        status[VALUES_USERS[0][x]] = VALUES_USERS[y][x];
-      }
+    userList[VALUES_USERS[y][0]] = {};
+    for (let x = 0; x < VALUES_USERS[y].length; x++) {
+      userList[VALUES_USERS[y][0]][VALUES_USERS[0][x]] = VALUES_USERS[y][x];
     }
   }
 
   // 入力されてない日付を取得
-  let emptyDateList = [];
+  let emptyDateList = {};
+  for (let x = 1; x < VALUES_DATA[0].length; x++) {
+    emptyDateList[VALUES_DATA[0][x]] = [];
+  }
   for (let y = 1; y < VALUES_DATA.length; y++) {
-    if (VALUES_DATA[y][status.number] === "") {
-      emptyDateList.push(formatDate(VALUES_DATA[y][0]));
+    for (let x = 1; x < VALUES_DATA[y].length; x++) {
+      if (VALUES_DATA[y][x] === "") {
+        emptyDateList[VALUES_DATA[0][x]].push(formatDate(VALUES_DATA[y][0]));
+      }
     }
   }
 
   // 一番入力されている日付を取得
   let count = {};
   for (let y = 1; y < VALUES_DATA.length; y++) {
-    let cell = VALUES_DATA[y][status.number];
+    let cell = VALUES_DATA[y][userList[email].number];
     count[cell] = (count[cell] || 0) + 1;
   }
   let suggestedElapsedTimeList = Object.entries(count)
@@ -51,7 +57,7 @@ function getOverview() {
     dateList.push(formatDate(VALUES_DATA[y][0]));
   }
 
-  return { emptyDateList: emptyDateList, suggestedElapsedTimeList: suggestedElapsedTimeList, status: status, dateList: dateList };
+  return { emptyDateList: emptyDateList, suggestedElapsedTimeList: suggestedElapsedTimeList, userList: userList, dateList: dateList, email: email };
 }
 
 function getRecords() {

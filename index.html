@@ -19,7 +19,7 @@
   <body>
     <div id="app">
       <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-        <span class="navbar-brand mb-0 h1">Study Record</span>
+        <span class="navbar-brand mb-0 h1">学習記録</span>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -29,13 +29,15 @@
               <a class="nav-link" href="javascript:void(0)" data-toggle="modal" data-target="#writeModal" data-backdrop="static"><i class="fas fa-plus-square"></i> 記録する</a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" data-toggle="modal" data-target="#unknownDateModal"><i class="fas fa-list"></i> 未入力者</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="https://docs.google.com/spreadsheets/d/1zWm41EXRGEzcbEd82RFNjJhV2OdYBxt0DZOIhQkhMec/edit?usp=sharing" target="_blank"
                 ><i class="fas fa-table"></i> グループ編集</a
               >
             </li>
           </ul>
           <form class="form-inline">
-            <label class="mr-sm-2">カスタム範囲</label>
             <div class="input-group mr-sm-2 mb-2 mb-sm-0">
               <div class="input-group-prepend">
                 <span class="input-group-text">開始</span>
@@ -52,7 +54,7 @@
         </div>
       </nav>
       <div class="container">
-        <div class="alert alert-danger" v-if="emptyDateList.length">入力されていない日付があります</div>
+        <div class="alert alert-danger" v-if="userEmptyDateList.length">入力されていない日付があります</div>
         <div class="row">
           <div class="col-md-3">
             <div class="list-group nav">
@@ -96,9 +98,15 @@
           </div>
         </div>
       </div>
+      <div v-if="loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%)">
+        <div class="text-center w-100">
+          <div class="spinner-border text-primary" style="width: 3rem; height: 3rem"></div>
+        </div>
+        <div class="mt-1 text-center w-100">読み込み中</div>
+      </div>
       <div class="modal fade" id="writeModal" tabindex="-1">
         <div class="modal-dialog">
-          <div class="modal-content" id="writeApp">
+          <div class="modal-content">
             <form v-on:submit.prevent="submit()">
               <div class="modal-header">
                 <h5 class="modal-title">記録する</h5>
@@ -111,8 +119,8 @@
                   <label>学習した日付</label>
                   <input class="form-control" type="date" required v-model:value="entryDate" v-bind:min="dateList[0]" v-bind:max="dateList[dateList.length - 1]" />
                   <div class="d-flex mt-2">
-                    <button class="btn btn-sm btn-outline-info mr-2" type="button" v-on:click="entryDate = element" v-for="element of emptyDateList">{{ element.replace(/-/g, '/') }}</button>
-                    <span v-if="!emptyDateList.length">すべての日付の学習時間が入力されています</span>
+                    <button class="btn btn-sm btn-outline-info mr-2" type="button" v-on:click="entryDate = element" v-for="element of userEmptyDateList">{{ formatDate(element) }}</button>
+                    <span v-if="!userEmptyDateList.length">すべての日付の学習時間が入力されています</span>
                   </div>
                 </div>
                 <div class="form-group">
@@ -152,6 +160,39 @@
           </div>
         </div>
       </div>
+      <div class="modal fade" id="unknownDateModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">未入力者リスト</h5>
+              <button type="button" class="close" data-dismiss="modal">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="table-responsive">
+                <table class="table table-sm text-nowrap">
+                  <tbody>
+                    <tr v-for="[user, list] of Object.entries(emptyDateList)" v-if="list.length">
+                      <th scope="row">{{ userList[user].name }}</th>
+                      <td>
+                        <span v-for="element of list"> {{ formatDate(element) }}, </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-info" onclick="loadData()">
+                <div class="spinner-border spinner-border-sm" v-if="loading"></div>
+                データ更新
+              </button>
+              <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">閉じる</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
     <script
@@ -166,5 +207,10 @@
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
     <?!= HtmlService.createHtmlOutputFromFile("index.js").getContent() ?>
+    <script>
+      $(".popover-dismiss").popover({
+        trigger: "focus",
+      });
+    </script>
   </body>
 </html>

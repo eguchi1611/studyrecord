@@ -8,7 +8,9 @@
         start: "",
         end: "",
       },
-      emptyDateList: [],
+      userEmptyDateList: [],
+      userList: {},
+      emptyDateList: {},
       suggestedElapsedTimeList: [],
       status: {},
       dateList: [],
@@ -16,6 +18,7 @@
       elapsedHours: 0,
       elapsedMinutes: 0,
       responseMessage: "",
+      loading: 0,
     },
     computed: {
       dateMin() {
@@ -63,7 +66,6 @@
         google.script.run
           .withSuccessHandler(function (mesage) {
             loadData();
-
             // メッセージ
             window.app.responseMessage = "記録しました";
             setTimeout(() => {
@@ -71,6 +73,10 @@
             }, 2000);
           })
           .commit(this.entryDate, Number(this.elapsedHours) + Math.round((this.elapsedMinutes / 60) * 10) / 10, this.status, this.dateList);
+      },
+      formatDate(dateText) {
+        let date = new Date(dateText);
+        return date.getMonth() + 1 + "月" + date.getDate() + "日" + "(" + ["日", "月", "火", "水", "木", "金", "土"][date.getDay()] + ")";
       },
     },
     watch: {
@@ -87,33 +93,51 @@
   $(loadData);
 
   function loadData() {
+    let app = window.app;
+    app.loading++;
     google.script.run
       .withSuccessHandler(function (overview) {
-        let app = window.app;
+        // userList
+        app.userList = overview.userList;
 
-        // emptyDateList
-        if (!overview.emptyDateList.length) {
+        let emptyDateList = {};
+        let keys = Object.entries(overview.userList)
+          .sort((a, b) => a[1].number - b[1].number)
+          .map((v) => v[0]);
+        keys.forEach((key) => {
+          emptyDateList[key] = overview.emptyDateList[key];
+        });
+        app.emptyDateList = emptyDateList;
+
+        let userEmptyDateList = overview.emptyDateList[overview.email];
+        // userEmptyDateList
+        if (!userEmptyDateList.length) {
           $("#writeModal").modal("hide");
         }
-        app.emptyDateList = overview.emptyDateList;
-        app.entryDate = overview.emptyDateList[0];
+        app.userEmptyDateList = userEmptyDateList;
+        app.entryDate = userEmptyDateList[0];
 
         // suggestedElapsedTimeList
         app.suggestedElapsedTimeList = overview.suggestedElapsedTimeList.splice(0, 3);
 
         // status
-        app.status = overview.status;
+        app.status = overview.userList[overview.email];
 
         // dateList
         app.dateList = overview.dateList;
+
+        app.loading--;
       })
       .getOverview();
 
+    app.loading++;
     google.script.run
       .withSuccessHandler(function (records) {
-        let app = window.app;
         app.records = records;
         app.tab = Object.keys(app.records).sort()[0];
+        setTimeout(tableSort, 0);
+
+        app.loading--;
       })
       .getRecords();
   }
