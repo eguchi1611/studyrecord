@@ -19,6 +19,8 @@
       elapsedMinutes: 0,
       responseMessage: "",
       loading: 0,
+      sorted: -1,
+      selectedRange: "all",
     },
     computed: {
       dateMin() {
@@ -33,34 +35,39 @@
       },
     },
     methods: {
-      getTotalAll(className, groupName) {
+      getAverage(className, groupName) {
         let total = 0;
         let groups = this.records[className][groupName].total;
-        let keys = Object.keys(groups);
-        for (let key of keys) {
-          total += groups[key];
-        }
+        let keys = getKeys();
+        keys.forEach((k) => {
+          total += groups[k];
+        });
         return Math.round((total / keys.length) * 10) / 10;
       },
-      getTotalWeek(className, groupName) {
+      getTotal(className, groupName) {
         let total = 0;
         let groups = this.records[className][groupName].total;
-        let keys = Object.keys(groups).splice(-7, 7);
-        for (let key of keys) {
-          total += groups[key];
-        }
-        return Math.round((total / keys.length) * 10) / 10;
+        getKeys().forEach((k) => {
+          total += groups[k];
+        });
+        return Math.round(total * 10) / 10;
       },
-      getTotalCustom(className, groupName) {
-        let start = (new Date(this.customRange.start).getTime() - new Date(this.dateMin).getTime()) / 24 / 60 / 60 / 1000;
-        let end = (new Date(this.customRange.end).getTime() - new Date(this.dateMax)) / 24 / 60 / 60 / 1000;
-        let total = 0;
-        let groups = this.records[className][groupName].total;
-        let keys = this.dateList.slice(start, end != 0 ? end : undefined);
-        for (let key of keys) {
-          total += groups[key];
+      getCurve(className, groupName) {
+        let totalList = [];
+        for (let key of Object.keys(this.records[className])) {
+          let total = 0;
+          getKeys().forEach((k) => {
+            total += this.records[className][key].total[k];
+          });
+          totalList.push(total);
         }
-        return Math.round((total / keys.length) * 10) / 10;
+        let totalAverage = totalList.reduce((sum, element) => sum + element) / totalList.length;
+        let variance = 0;
+        totalList.forEach((score) => {
+          variance += (score - totalAverage) ** 2;
+        });
+        variance = Math.sqrt(variance / totalList.length);
+        return Math.round((((this.getTotal(className, groupName) - totalAverage) / variance) * 10 + 50) * 10) / 10;
       },
       submit() {
         google.script.run
@@ -78,9 +85,22 @@
         let date = new Date(dateText);
         return date.getMonth() + 1 + "月" + date.getDate() + "日" + "(" + ["日", "月", "火", "水", "木", "金", "土"][date.getDay()] + ")";
       },
+      sort(sort) {
+        tableSort();
+        if (this.sorted == sort) {
+          this.sorted = -1;
+          $(".sortable_table").trigger("sorton", [[[1, 0]]]);
+        } else {
+          this.sorted = sort;
+          $(".sortable_table").trigger("sorton", [[[3, sort]]]);
+        }
+      },
     },
     watch: {
       tab() {
+        setTimeout(tableSort, 0);
+      },
+      selectedRange() {
         setTimeout(tableSort, 0);
       },
       customRange: {
@@ -135,7 +155,7 @@
       .withSuccessHandler(function (records) {
         app.records = records;
         app.tab = Object.keys(app.records).sort()[0];
-        setTimeout(tableSort, 0);
+        setTimeout(tableSort, 10);
 
         app.loading--;
       })
@@ -143,12 +163,37 @@
   }
 
   function tableSort() {
+    let app = window.app;
     $(".sortable_table").trigger("destroy");
     $(".sortable_table").tablesorter({
       sortList: [[1, 0]],
       headers: {
         0: { sorter: false },
+        1: { sorter: false },
+        2: { sorter: false },
+        3: { sorter: false },
+        4: { sorter: false },
       },
     });
+    if (app.sorted > -1) {
+      $(".sortable_table").trigger("sorton", [[[3, app.sorted]]]);
+    }
+  }
+
+  function getKeys() {
+    let app = window.app;
+    let start = 0;
+    let end = 0;
+    if (app.selectedRange == "custom") {
+      start = (new Date(app.customRange.start).getTime() - new Date(app.dateMin).getTime()) / 86400000;
+      end = (new Date(app.customRange.end).getTime() - new Date(app.dateMax)) / 86400000;
+    } else if (app.selectedRange == "day") {
+      start = -1;
+      end = 0;
+    } else if (app.selectedRange == "week") {
+      start = -7;
+      end = 0;
+    }
+    return app.dateList.slice(start, end != 0 ? end : undefined);
   }
 </script>
