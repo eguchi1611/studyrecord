@@ -112,7 +112,7 @@
                   <label>学習した日付</label>
                   <input class="form-control" type="date" required v-model:value="entryDate" v-bind:min="dateList[0]" v-bind:max="dateList[dateList.length - 1]" />
                   <div class="d-flex mt-2">
-                    <button class="btn btn-sm btn-outline-info mr-2" type="button" v-on:click="entryDate = element" v-for="element of userEmptyDateList">{{ formatDate(element) }}</button>
+                    <button class="btn btn-sm btn-outline-info mr-2" v-bind:class="{ active: entryDate == element }" type="button" v-on:click="entryDate = element" v-for="element of userEmptyDateList">{{ formatDate(element) }}</button>
                     <span v-if="!userEmptyDateList.length">すべての日付の学習時間が入力されています</span>
                   </div>
                 </div>
